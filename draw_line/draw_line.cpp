@@ -15,18 +15,16 @@ const int WIDTH = 500, HEIGHT = 500;
 int mx = WIDTH / 2, my = HEIGHT / 2;
 
 void dda_line(int x1, int y1, int x2, int y2) {
+  // Draw line from (x1, y1) to (x2, y2) using the DDA algorithm.
   glBegin(GL_POINTS);
 
   if (x1 == x2) {
-    if (y1 > y2) {
-      std::swap(y1, y2);
-    }
-
-    for (int y = y1; y <= y2; y++) {
+    // Special case for a vertical line.
+    for (int y = std::min(y1, y2); y <= std::max(y1, y2); y++) {
       glVertex2f(x1, y);
     }
   } else {
-    const double m = (y1 - y2) / (double)(x1 - x2);
+    const double m = (double)(y1 - y2) / (double)(x1 - x2);
     if (std::abs(m) <= 1) {
       if (x1 > x2) {
         std::swap(x1, x2);
@@ -52,6 +50,7 @@ void dda_line(int x1, int y1, int x2, int y2) {
 }
 
 void bresenham_line(int x1, int y1, int x2, int y2) {
+  // Draw a line from (x1, y1) to (x2, y2) using Bresenham's algorithm.
   glBegin(GL_POINTS);
 
   const int dx = x2 - x1;
@@ -91,7 +90,7 @@ void bresenham_line(int x1, int y1, int x2, int y2) {
       }
     }
   } else {
-    // Slope is outside of -1 and 1, so step by y.
+    // Slope is outside of -1 to 1, so step by y.
     const int diff = dx2 - dy2;
     int p = dx2 - dy;
 
@@ -143,7 +142,7 @@ void show_screen() {
   bresenham_line(250, 250, 500, 500);
   bresenham_line(500, 250, 250, 500);
 
-  // Draw a line from the center of the window to the mouse using the DDA algorithm.
+  // Draw a line from the center of the window to the mouse.
   glColor3f(1.0, 1.0, 1.0);
   bresenham_line(WIDTH / 2, HEIGHT / 2, mx, my);
 

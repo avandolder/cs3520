@@ -1,8 +1,21 @@
-CFLAGS = -O2
-LIBS = -lglut -lGL -lGLU
-CC=g++ $(CFLAGS)
+CXX=g++
+CXXFLAGS=-std=c++11
+RM=rm -f
+LDLIBS=-lglut -lGL -lGLU
 
-draw_line: draw_line.o
-	$(CC) -o draw_line draw_line.o $(LIBS)
+SRCS=draw_line.cpp
+OBJS=$(subst .cpp,.o,$(SRCS))
 
-$*.o: $*.cpp
+all: draw_line
+
+draw_line: $(OBJS)
+	$(CXX) -o draw_line $(OBJS) $(LDLIBS)
+
+%.o: %.cpp
+	g++ $(CXXFLAGS) -c $<
+
+clean:
+	$(RM) $(OBJS)
+
+distclean: clean
+	$(RM) draw_line
