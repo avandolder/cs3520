@@ -12,10 +12,6 @@
 
 #include <GLFW/glfw3.h>
 
-enum class Key: unsigned char {
-  Escape = 27,
-};
-
 const int WIDTH = 500, HEIGHT = 500;
 
 void bresenham_line(int x1, int y1, int x2, int y2) {
@@ -89,19 +85,19 @@ void handle_key(GLFWwindow *window, int key, int scancode, int action, int mods)
 }
 
 void draw_lines(double mx, double my) {
-  // Draw lines with various slopes.
+  // Draw Xs with various slopes.
   glColor3f(0, 0, 1);
-  bresenham_line(0, 0, 250, 125);
-  bresenham_line(0, 125, 250, 0);
+  bresenham_line(0, 0, WIDTH / 2, HEIGHT / 4);
+  bresenham_line(0, HEIGHT / 4, WIDTH / 2, 0);
   glColor3f(1, 0, 0);
-  bresenham_line(0, 250, 125, 500);
-  bresenham_line(0, 500, 125, 250);
+  bresenham_line(0, HEIGHT / 2, WIDTH / 4, HEIGHT);
+  bresenham_line(0, HEIGHT, WIDTH / 4, HEIGHT / 2);
   glColor3f(0, 1, 0);
-  bresenham_line(500, 250, 0, 250);
-  bresenham_line(250, 0, 250, 500);
+  bresenham_line(WIDTH, HEIGHT / 2, 0, HEIGHT / 2);
+  bresenham_line(WIDTH / 2, 0, WIDTH /2, HEIGHT);
   glColor3f(1, 1, 0);
-  bresenham_line(250, 250, 500, 500);
-  bresenham_line(500, 250, 250, 500);
+  bresenham_line(WIDTH / 2, HEIGHT / 2, WIDTH, HEIGHT);
+  bresenham_line(WIDTH, HEIGHT / 2, WIDTH / 2, HEIGHT);
 
   // Draw a line from the center of the window to the mouse.
   glColor3f(1, 1, 1);
@@ -113,7 +109,7 @@ int main (int argc, char **argv) {
     return EXIT_FAILURE;
   }
 
-  auto window = glfwCreateWindow(500, 500, "Simple Example", nullptr, nullptr);
+  auto window = glfwCreateWindow(WIDTH, HEIGHT, "Draw Lines", nullptr, nullptr);
   if (!window) {
     glfwTerminate();
     return EXIT_FAILURE;
@@ -128,9 +124,9 @@ int main (int argc, char **argv) {
   while (!glfwWindowShouldClose(window)) {
     // Set up OpenGL to render the current frame.
     glViewport(0, 0, WIDTH, HEIGHT);
-    glClearColor(0.0, 0.0, 0.0, 0.0);
+    glClearColor(0, 0, 0, 0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    glPointSize(1.0);
+    glPointSize(1);
     glLoadIdentity();
     glMatrixMode(GL_PROJECTION);
     glOrtho(0, WIDTH, 0, HEIGHT, 0, 1);
