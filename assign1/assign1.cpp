@@ -2,27 +2,21 @@
 // Adam Vandolder
 // Student #104629080
 // Implement Bresenham's line algorithm, and use it to draw lines using OpenGL.
-// Should be compiled with -std=c++11 using g++.
-// Due to use of unistd.h and usleep, it must be compiled/ran on Linux, or
-// as I did, Windows Subsystem for Linux with an X11 server.
 // Creates a window with various lines drawn with differing slopes,
 // as well as a line from the center of the window that follows the mouse.
 
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
-#include <unistd.h>
 #include <utility>
 
-#include <GL/freeglut.h>
-#include <GL/gl.h>
+#include <GLFW/glfw3.h>
 
 enum class Key: unsigned char {
   Escape = 27,
 };
 
 const int WIDTH = 500, HEIGHT = 500;
-int mx = WIDTH / 2, my = HEIGHT / 2;
 
 void bresenham_line(int x1, int y1, int x2, int y2) {
   // Draw a line from (x1, y1) to (x2, y2) using Bresenham's algorithm.
@@ -88,21 +82,13 @@ void bresenham_line(int x1, int y1, int x2, int y2) {
   glEnd();
 }
 
-void handle_mouse_movement(int x, int y) {
-  mx = x;
-  my = HEIGHT - y;
-}
-
-void handle_key(unsigned char key, int x, int y) {
-  switch (static_cast<Key>(key)) {
-    case Key::Escape:
-      std::exit(0);
+void handle_key(GLFWwindow *window, int key, int scancode, int action, int mods) {
+  if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+    std::exit(EXIT_SUCCESS);
   }
 }
 
-void show_screen() {
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+void draw_lines(double mx, double my) {
   // Draw lines with various slopes.
   glColor3f(0, 0, 1);
   bresenham_line(0, 0, 250, 125);
@@ -119,34 +105,45 @@ void show_screen() {
 
   // Draw a line from the center of the window to the mouse.
   glColor3f(1, 1, 1);
-  bresenham_line(WIDTH / 2, HEIGHT / 2, mx, my);
-
-  glutSwapBuffers();
-
-  usleep(10000);
-  glutPostRedisplay();
+  bresenham_line(WIDTH / 2, HEIGHT / 2, mx, HEIGHT - my);
 }
 
 int main (int argc, char **argv) {
-  // Initialize the GLUT window.
-  glutInit(&argc, argv);
-  glutInitDisplayMode(GLUT_RGBA);
-  glutInitWindowSize(WIDTH, HEIGHT);
-  glutInitWindowPosition(0, 0);
-  glutCreateWindow("Draw Line");
+  if (!glfwInit()) {
+    return EXIT_FAILURE;
+  }
 
-  // Initialize OpenGL.
-  glClearColor(0.0, 0.0, 0.0, 0.0);
-  glPointSize(1.0);
-  glMatrixMode(GL_PROJECTION);
-  glOrtho(0, WIDTH, 0, HEIGHT, -1, 1);
+  auto window = glfwCreateWindow(500, 500, "Simple Example", nullptr, nullptr);
+  if (!window) {
+    glfwTerminate();
+    return EXIT_FAILURE;
+  }
 
-  // Add the appropriate callbacks.
-  glutDisplayFunc(show_screen);
-  glutMotionFunc(handle_mouse_movement);
-  glutPassiveMotionFunc(handle_mouse_movement);
-  glutKeyboardFunc(handle_key);
+  glfwMakeContextCurrent(window);
+  glfwSwapInterval(1);
+  glfwSetKeyCallback(window, handle_key);
 
-  glutMainLoop();
-  return 0;
+  double mx = WIDTH / 2, my = HEIGHT / 2;
+
+  while (!glfwWindowShouldClose(window)) {
+    // Set up OpenGL to render the current frame.
+    glViewport(0, 0, WIDTH, HEIGHT);
+    glClearColor(0.0, 0.0, 0.0, 0.0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glPointSize(1.0);
+    glLoadIdentity();
+    glMatrixMode(GL_PROJECTION);
+    glOrtho(0, WIDTH, 0, HEIGHT, 0, 1);
+
+    // Render various lines using Bresenham's algorithm.
+    glfwGetCursorPos(window, &mx, &my);
+    draw_lines(mx, my);
+
+    glfwSwapBuffers(window);
+    glfwPollEvents();
+  }
+
+  glfwDestroyWindow(window);
+  glfwTerminate();
+  return EXIT_SUCCESS;
 }

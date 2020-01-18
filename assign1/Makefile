@@ -1,7 +1,7 @@
 CXX=g++
-CXXFLAGS=-std=c++11 -O2
+CXXFLAGS=-std=c++11 -O2 `pkg-config --cflags glfw3`
 RM=rm -f
-LDLIBS=-lglut -lGL -lGLU
+LDLIBS=-lGL -lGLU `pkg-config --libs glfw3`
 
 SRCS=assign1.cpp
 OBJS=$(subst .cpp,.o,$(SRCS))
