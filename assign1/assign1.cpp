@@ -136,7 +136,7 @@ int main (int argc, char **argv) {
     draw_lines(mx, my);
 
     glfwSwapBuffers(window);
-    glfwPollEvents();
+    glfwWaitEvents();
   }
 
   glfwDestroyWindow(window);
