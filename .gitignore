@@ -1,2 +1,6 @@
 *.o
 draw_line
+assign1
+assign2
+.vscode
+run.sh

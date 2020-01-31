@@ -1,5 +1,5 @@
-CXX=clang++-9
-CXXFLAGS=-Wall -O2
+CXX=g++
+CXXFLAGS=-std=c++11 -Wall -O2
 RM=rm -f
 LDLIBS=-lglut -lGL -lGLU
 
