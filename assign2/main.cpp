@@ -42,6 +42,18 @@ void render() {
   glutSwapBuffers();
 }
 
+void reshape(int w, int h) {
+  width = w;
+  height = h;
+
+  glViewport(0, 0, w, h);
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  glOrtho(0, w, 0, h, -1, 1);
+
+  state->reshape(w, h);
+}
+
 void handle_mouse(int button, int bstate, int x, int y) {
   state->handle_mouse(button, bstate, x, y);
 }
@@ -61,10 +73,12 @@ int main (int argc, char **argv) {
   // Initialize OpenGL.
   glPointSize(1.0);
   glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
   glOrtho(0, width, 0, height, -1, 1);
 
   // Add the appropriate callbacks.
   glutDisplayFunc(render);
+  glutReshapeFunc(reshape);
   glutMouseFunc(handle_mouse);
   glutKeyboardFunc(handle_key);
   glutTimerFunc(1, tick, 0);

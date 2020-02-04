@@ -164,6 +164,11 @@ void PlayState::render_predator() {
   glPopMatrix();
 }
 
+void PlayState::reshape(int w, int h) {
+  width = w;
+  height = h;
+}
+
 void PlayState::handle_key(unsigned char key, int x, int y) {
   switch (key) {
     case '\e':

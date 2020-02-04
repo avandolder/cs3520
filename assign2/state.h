@@ -10,6 +10,7 @@ class State {
 
   virtual void tick(float dt) = 0;
   virtual void render() = 0;
+  virtual void reshape(int w, int h) = 0;
   virtual void handle_key(unsigned char key, int x, int y) = 0;
   virtual void handle_mouse(int button, int state, int x, int y) = 0;
 };
@@ -20,6 +21,7 @@ class PlayState : public State {
 
   void tick(float dt) override;
   void render() override;
+  void reshape(int w, int h) override;
   void handle_key(unsigned char key, int x, int y) override;
   void handle_mouse(int button, int state, int x, int y) override;
 
