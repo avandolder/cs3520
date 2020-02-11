@@ -1,0 +1,20 @@
+// Part II
+
+void fillHalfCircle(int xc, int yc, int r) {
+    float step = 1.0 / r;
+
+    glBegin(GL_LINES);
+    for (float theta = 0; theta <= PI/4; theta += step) {
+        int x = r * cos(theta);
+        int y = r * sin(theta);
+
+        // Draw line from (-x, -y) to (x, -y)
+        glVertex2i(xc - x, yc - y);
+        glVertex2i(xc + x, yc - y);
+
+        // Draw line from (-y, -x) to (y, -x)
+        glVertexi(xc - y, yc - x);
+        glVertexi(xc + y, xc - x);
+    }
+    glEnd();
+}
