@@ -78,23 +78,29 @@ float PlayState::get_facing_angle(float loc) {
 }
 
 void PlayState::tick(float dt) {
-  if (prey_active && predator_active) {
+  if (prey_active) {
     prey_loc += prey_speed * dt;
 
-    predator_loc += prey_speed * dt * 2;
-    if (predator_loc < 0) {
-      predator_loc = 1;
-    } else if (predator_loc > 1) {
-      predator_loc = 0;
-    }
+    if (predator_active) {
+      predator_loc += prey_speed * dt * 2;
+      if (predator_loc < 0) {
+        predator_loc = 1;
+      } else if (predator_loc > 1) {
+        predator_loc = 0;
+      }
 
-    if (prey_loc >= 1) {
-      // Prey has escaped.
-      prey_active = false;
-    } else if (prey_loc - 0.01 <= predator_loc && prey_loc + 0.01 >= predator_loc) {
-      // Predator has reached the prey.
-      prey_active = false;
-      predator_size *= predator_growth_rate;
+      if (prey_loc >= 1) {
+        // Prey has escaped.
+        prey_active = false;
+        predator_size /= predator_growth_rate;
+      } else if (prey_loc - 0.01 <= predator_loc && prey_loc + 0.01 >= predator_loc) {
+        // Predator has reached the prey.
+        prey_active = false;
+        predator_size *= predator_growth_rate;
+      }
+    } else if (prey_loc > 1) {
+      // Prey can't escape until the predator is active.
+      prey_loc = 0.0;
     }
   }
 }
@@ -133,14 +139,14 @@ void PlayState::render_prey() {
   glPushMatrix();
   glTranslatef(pt.first, pt.second, 0);
   glRotatef(get_facing_angle(prey_loc), 0, 0, 1);
-  glScalef(15, 15, 0);
+  glScalef(10, 15, 0);
   glColor3f(0, 1, 0);
 
   glBegin(GL_POLYGON);
-    glVertex2f(-0.75, -1);
-    glVertex2f( 0.75, -1);
-    glVertex2f( 0.75,  1);
-    glVertex2f(-0.75,  1);
+    glVertex2f(-1, -1);
+    glVertex2f( 1, -1);
+    glVertex2f( 1,  1);
+    glVertex2f(-1,  1);
   glEnd();
 
   glPopMatrix();
