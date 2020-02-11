@@ -22,9 +22,10 @@ void tick(int v) {
   int elapsed_time = time - prev_time;
 
   std::stringstream title;
-  title << "FPS: " << 1000 / elapsed_time;
+  title << "Assignment 2 FPS: " << 1000 / elapsed_time;
   glutSetWindowTitle(title.str().c_str());
 
+  // Pass elapsed time in seconds.
   state->tick(elapsed_time / 1000.0);
   glutPostRedisplay();
 
@@ -68,10 +69,11 @@ int main (int argc, char **argv) {
   glutInitDisplayMode(GLUT_RGBA);
   glutInitWindowSize(width, height);
   glutInitWindowPosition(0, 0);
-  glutCreateWindow("Draw Line");
+  glutCreateWindow("Assignment 2");
 
   // Initialize OpenGL.
   glPointSize(1.0);
+  glViewport(0, 0, width, height);
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
   glOrtho(0, width, 0, height, -1, 1);
