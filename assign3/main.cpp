@@ -11,10 +11,6 @@
 #include <GL/freeglut.h>
 #include <GL/gl.h>
 
-int width = 500, height = 500;
-int fps = 60;
-unsigned int frame_time = 1000 / fps;
-
 struct Vertex {
   GLfloat coords[3] = {0.0, 0.0, 0.0};
 
@@ -32,51 +28,59 @@ struct Polygon {
   inline Vertex& operator[](int idx) { return vertices[idx]; }
 };
 
-using Object = std::vector<Polygon>;
-
+struct Object {
+  Vertex origin {0.0, 0.0, 0.0};
+  std::vector<Polygon> faces;
+};
 std::vector<Object> objects;
+
+GLfloat width = 500.0, height = 500.0;
+int fps = 60;
+unsigned int frame_time = 1000 / fps;
+Vertex eye(0.0, 0.0, -5.0);
 
 Object read_object(std::string path) {
   std::ifstream file(path);
-  Object obj;
+  Object object;
 
   std::string type;
-  GLfloat color[3] = {0.0, 0.0, 0.0};
   Polygon face;
   while (file >> type) {
     if (type == "color") {
-      file >> color[0];
-      file >> color[1];
-      file >> color[2];
+      file >> face.color[0];
+      file >> face.color[1];
+      file >> face.color[2];
     } else if (type == "face") {
-      if (obj.size() > 0) {
-        obj.push_back(face);
-      }
-
       face = Polygon();
-      std::copy(std::begin(color), std::end(color), std::begin(face.color));
     } else if (type == "vertex") {
       Vertex v;
       file >> v[0];
       file >> v[1];
       file >> v[2];
       face.vertices.push_back(v);
+    } else if (type == "origin") {
+      file >> object.origin[0];
+      file >> object.origin[1];
+      file >> object.origin[2];
+    } else if (type == "end") {
+      object.faces.push_back(face);
     }
   }
 
-  obj.push_back(face);
-
-  return obj;
+  return object;
 }
 
 void render_object(Object& obj) {
-  for (auto& face : obj) {
+  for (auto& face : obj.faces) {
+    glPushMatrix();
     glColor3f(face.color[0], face.color[1], face.color[2]);
+    glTranslatef(obj.origin[0], obj.origin[1], obj.origin[2]);
     glBegin(GL_POLYGON);
     for (auto& v : face.vertices) {
-      glVertex2f(v[0], v[1]); //, v[2]);
+      glVertex3f(v[0], v[1], v[2]);
     }
     glEnd();
+    glPopMatrix();
   }
 }
 
@@ -84,24 +88,23 @@ void tick(int v) {
   // Run tick again, at approximately 60 FPS.
   glutTimerFunc(frame_time, tick, 0);
 
-  // Calculated time elapsed since the last frame.
-  int time = glutGet(GLUT_ELAPSED_TIME);
-  static int prev_time = 0;
-  int elapsed_time = time - prev_time;
-
   std::stringstream title;
-  title << "Assignment 2 FPS: " << 1000 / elapsed_time;
+  title << "Assignment 2 X:" << eye[0] << " Y:" << eye[1] << " Z:" << eye[2];
   glutSetWindowTitle(title.str().c_str());
 
   glutPostRedisplay();
-
-  prev_time = time;
 }
 
 void render() {
+  glMatrixMode(GL_PROJECTION);
+  glLoadIdentity();
+  gluPerspective(40.0, (GLdouble)width / height, 1.0, 100.0);
+
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
-  glClearColor(0, 0, 0, 0);
+  gluLookAt(eye[0], eye[1], eye[2], 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+
+  glClearColor(0.0, 0.0, 0.0, 0.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   for (auto& obj : objects) {
@@ -114,13 +117,13 @@ void render() {
 void reshape(int w, int h) {
   width = w;
   height = h;
-
-  glViewport(0, 0, w, h);
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
 }
 
-void handle_mouse(int button, int bstate, int x, int y) {
+void handle_mouse(int button, int state, int x, int y) {
+  if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+    eye[0] += x / width;
+    eye[1] += (height - y) / height;
+  }
 }
 
 void handle_key(unsigned char key, int x, int y) {
@@ -130,19 +133,27 @@ void handle_key(unsigned char key, int x, int y) {
   }
 }
 
+void menu(int option) {
+  switch (option) {
+    case 1:
+      eye[2] += 1.0;
+      break;
+    case 2:
+      eye[2] -= 1.0;
+      break;
+    case 3:
+      std::exit(0);
+  }
+}
+
 int main (int argc, char **argv) {
-  // Initialize glut.
+  // Initialize OpenGL and GLUT.
   glutInit(&argc, argv);
-  glutInitDisplayMode(GLUT_RGBA);
+  glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
   glutInitWindowSize(width, height);
   glutInitWindowPosition(0, 0);
-  glutCreateWindow("Assignment 2");
-
-  // Initialize OpenGL.
-  glViewport(0, 0, width, height);
-  glMatrixMode(GL_PROJECTION);
-  glLoadIdentity();
-  gluOrtho2D(0.0, width, 0.0, height);
+  glutCreateWindow("Assignment 3");
+  glEnable(GL_DEPTH_TEST);
 
   // Add the appropriate callbacks.
   glutDisplayFunc(render);
@@ -150,11 +161,15 @@ int main (int argc, char **argv) {
   glutMouseFunc(handle_mouse);
   glutKeyboardFunc(handle_key);
   glutTimerFunc(1, tick, 0);
-  
-  // Load the objects.
+
+  glutCreateMenu(menu);
+  glutAddMenuEntry("Increment Eye Z", 1);
+  glutAddMenuEntry("Decrement Eye Z", 2);
+  glutAddMenuEntry("Quit", 3);
+  glutAttachMenu(GLUT_RIGHT_BUTTON);
+
+  // Load the object.
   objects.push_back(read_object("square.obj"));
 
   glutMainLoop();
-
-  return 0;
 }
