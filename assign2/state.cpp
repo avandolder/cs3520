@@ -177,7 +177,7 @@ void PlayState::reshape(int w, int h) {
 
 void PlayState::handle_key(unsigned char key, int x, int y) {
   switch (key) {
-    case '\e':
+    case 27: // Escape key
       std::exit(0);
   }
 }
