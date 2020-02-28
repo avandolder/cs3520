@@ -1,3 +1,13 @@
+// COMP-3520 Assignment #3
+// Adam Vandolder
+// Student #104629080
+//
+// Render a house from an object file and allow the user to move the camera.
+// Click on the screen with the left mouse button to shift the X/Y position
+// of the camera. Click the the right mouse button to bring up a context menu
+// that allows you to adjust the Z position. Use the WASD keys to rotate the
+// house object.
+
 #include <cmath>
 #include <cstdlib>
 #include <fstream>
@@ -9,13 +19,15 @@
 #include <GL/freeglut.h>
 #include <GL/gl.h>
 
-// Suppress unused parameter warnings from gcc.
+// Suppress unused parameter warnings from gcc. Useful since the GLUT callback
+// functions require various parameters that are often unnecessary.
 #ifdef __GNUC__
 #  define UNUSED __attribute__((unused))
 #else
 #  define UNUSED
 #endif
 
+// A Vertex represents a single (X, Y, Z) coordinate.
 struct Vertex {
   GLdouble coords[3] = {0.0, 0.0, 0.0};
 
@@ -25,58 +37,78 @@ struct Vertex {
   inline GLdouble& operator[](int idx) { return coords[idx]; }
 };
 
+// A Polygon is (potentially coloured) surface made up of vertices.
 struct Polygon {
   std::vector<Vertex> vertices;
   GLdouble color[3];
 
+  // Create a polygon based on data from an input stream.
+  static Polygon read(std::istream& in) {
+    Polygon p;
+
+    while (!in.eof()) {
+      if ((in >> std::ws).peek() == '#') {
+        // If the first non-whitespace character is a #, the line is a comment
+        // so skip it.
+        for (char c = in.get(); c != '\n'; c = in.get()) {}
+        continue;
+      }
+
+      std::string command;
+      in >> command;
+      if (command == "vertex") {
+        Vertex v;
+        in >> v[0];
+        in >> v[1];
+        in >> v[2];
+        p.vertices.push_back(v);
+      } else if (command == "color") {
+        in >> p.color[0];
+        in >> p.color[1];
+        in >> p.color[2];
+      } else if (command == "end") {
+        break;
+      }
+    }
+
+    return p;
+  }
+
   inline Vertex& operator[](int idx) { return vertices[idx]; }
 };
 
+// An Object is a collection of polygon with a defined origin and rotation.
 struct Object {
   Vertex origin;
   Vertex rotation_axis;
   GLdouble rotation_angle = 0.0;
-
   std::vector<Polygon> faces;
 
   static Object read(const std::string& path) {
     std::ifstream file(path);
     Object object;
 
-    std::string line;
-    Polygon face;
-    while (std::getline(file, line)) {
-      if (line[0] == '#') {
-        // Skip comment lines.
+    while (!file.eof()) {
+      if ((file >> std::ws).peek() == '#') {
+        // If the first non-whitespace character is a #, the line is a comment
+        // so skip it.
+        for (char c = file.get(); c != '\n'; c = file.get()) {}
         continue;
       }
 
-      std::istringstream str(line);
       std::string type;
-      str >> type;
-      if (type == "color") {
-        str >> face.color[0];
-        str >> face.color[1];
-        str >> face.color[2];
-      } else if (type == "face") {
-        face = Polygon();
-      } else if (type == "vertex") {
-        Vertex v;
-        str >> v[0];
-        str >> v[1];
-        str >> v[2];
-        face.vertices.push_back(v);
-      } else if (type == "origin") {
-        str >> object.origin[0];
-        str >> object.origin[1];
-        str >> object.origin[2];
+      file >> type;
+      if (type == "origin") {
+        file >> object.origin[0];
+        file >> object.origin[1];
+        file >> object.origin[2];
       } else if (type == "rotation") {
-        str >> object.rotation_angle;
-        str >> object.rotation_axis[0];
-        str >> object.rotation_axis[1];
-        str >> object.rotation_axis[2];
-      } else if (type == "end") {
-        object.faces.push_back(face);
+        file >> object.rotation_angle;
+        file >> object.rotation_axis[0];
+        file >> object.rotation_axis[1];
+        file >> object.rotation_axis[2];
+      } else if (type == "face") {
+        object.faces.push_back(Polygon::read(file));
       }
     }
 
@@ -84,38 +116,40 @@ struct Object {
   }
 
   void render() {
-    for (auto& face : faces) {
-      glPushMatrix();
-      glColor3d(face.color[0], face.color[1], face.color[2]);
-      glTranslated(origin[0], origin[1], origin[2]);
-      glRotated(rotation_angle, rotation_axis[0], rotation_axis[1], rotation_axis[2]);
+    glPushMatrix();
+    glTranslated(origin[0], origin[1], origin[2]);
+    glRotated(rotation_angle,
+              rotation_axis[0],
+              rotation_axis[1],
+              rotation_axis[2]);
 
+    for (auto& face : faces) {
+      glColor3d(face.color[0], face.color[1], face.color[2]);
       glBegin(GL_POLYGON);
       for (auto& v : face.vertices) {
         glVertex3d(v[0], v[1], v[2]);
       }
       glEnd();
-      
-      glPopMatrix();
     }
+
+    glPopMatrix();
   }
 } house = Object::read("house.obj");
 
 GLdouble width = 500.0, height = 500.0;
 int fps = 60;
 unsigned int frame_time = 1000 / fps;
-
+bool key_down[256] = {false};
 Vertex eye {0.0, 0.0, 8.0};
 GLdouble horz_rot, vert_rot;
-
-bool key_down[256] = {false};
 
 void tick(UNUSED int v) {
   // Run tick again, at approximately 60 FPS.
   glutTimerFunc(frame_time, tick, 0);
 
   std::stringstream title;
-  title << "Assignment 2 X:" << eye[0] << " Y:" << eye[1] << " Z:" << eye[2];
+  title << "Assignment 2 (X:" << eye[0] << " Y:" << eye[1] << " Z:" << eye[2]
+        << ")";
   glutSetWindowTitle(title.str().c_str());
 
   // Calculated time elapsed since the last frame.
@@ -123,7 +157,8 @@ void tick(UNUSED int v) {
   static int prev_time = 0;
   double dt = (time - prev_time) / 1000.0;
 
-  // Handle key presses.
+  // Rotate the house object, wrapping around at 360 degrees to prevent
+  // overflow.
   if (key_down['d']) {
     horz_rot = std::fmod(horz_rot + 360*dt/2, 360);
   }
@@ -143,13 +178,14 @@ void tick(UNUSED int v) {
 }
 
 void render() {
+  // Set up the view.
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
   gluPerspective(40.0, (GLdouble)width / height, 1.0, 100.0);
 
+  // Set up the camera to look at the origin.
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
-
   gluLookAt(eye[0], eye[1], eye[2], 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 
   glClearColor(0.0, 0.0, 0.0, 0.0);
@@ -157,7 +193,6 @@ void render() {
 
   glRotated(horz_rot, 0.0, 1.0, 0.0);
   glRotated(vert_rot, 1.0, 0.0, 0.0);
-
   house.render();
 
   glutSwapBuffers();
@@ -170,8 +205,10 @@ void reshape(int w, int h) {
 
 void handle_mouse(int button, int state, int x, int y) {
   if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+    // Normalize the pixel coordinates to the [-1, 1] interval.
     GLdouble dx = (x * 2.0) / width - 1.0;
     GLdouble dy = ((height - y) * 2.0) / height - 1.0;
+    // Then shift the X/Y position of the camera.
     eye[0] += dx;
     eye[1] += dy;
   }
@@ -183,6 +220,7 @@ void handle_key(unsigned char key, UNUSED int x, UNUSED int y) {
     std::exit(0);
   }
 
+  // Use a key_down array so that held keys will be repeated.
   key_down[key] = true;
 }
 
