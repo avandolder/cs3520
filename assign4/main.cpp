@@ -35,29 +35,6 @@ struct Vector {
   Vector(GLdouble x, GLdouble y, GLdouble z) : v{x, y, z} {}
 
   inline GLdouble& operator[](int idx) { return v[idx]; }
-
-  GLdouble length() {
-    return std::sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
-  }
-
-  void normalize() {
-    GLdouble l = length();
-
-    for (auto& c : v) {
-      c /= l;
-    }
-  }
-
-  static Vector cross_product(Vector& a, Vector& b, Vector& c) {
-    Vector n {
-      (b[1]-a[1])*(c[2]-a[2])-(b[2]-a[2])*(c[1]-a[1]),
-      (b[2]-a[2])*(c[0]-a[0])-(b[0]-a[0])*(c[2]-a[2]),
-      (b[0]-a[0])*(c[1]-a[1])-(b[1]-a[1])*(c[0]-a[0]),
-    };
-
-    n.normalize();
-    return n;
-  }
 };
 
 // A Polygon is (potentially coloured) surface made up of vertices.
@@ -98,11 +75,6 @@ struct Polygon {
   }
 
   inline Vector& operator[](int idx) { return vertices[idx]; }
-
-  Vector normal() {
-    if (vertices.size() < 3) return Vector();
-    return Vector::cross_product(vertices.at(0), vertices.at(1), vertices.at(2));
-  }
 };
 
 // An Object is a collection of polygons with a defined origin and rotation.
@@ -169,7 +141,7 @@ GLdouble width = 500.0, height = 500.0;
 int fps = 60;
 unsigned int frame_time = 1000 / fps;
 bool key_down[256] = {false};
-Vector eye {0.0, 0.0, 8.0};
+Vector eye {0.0, 0.0, 10.0};
 GLdouble horz_rot, vert_rot;
 
 GLfloat ambient[] = {0.2, 0.2, 0.2, 1.0};
@@ -182,6 +154,19 @@ GLfloat light0_ambient[]  = {0.0, 0.0, 0.0, 1.0};
 GLfloat light0_diffuse[]  = {1.0, 1.0, 1.0, 1.0};
 GLfloat light0_specular[] = {1.0, 1.0, 1.0, 1.0};
 GLfloat light0_position[] = {2.0, 2.0, 0.0, 1.0};
+bool light0_on = true;
+
+GLfloat light1_ambient[]  = {0.0, 0.0, 0.0, 1.0};
+GLfloat light1_diffuse[]  = {1.0, 1.0, 1.0, 1.0};
+GLfloat light1_specular[] = {1.0, 1.0, 1.0, 1.0};
+GLfloat light1_position[] = {2.0, 2.0, 0.0, 1.0};
+bool light1_on = true;
+
+GLfloat light2_ambient[]  = {0.0, 0.0, 0.0, 1.0};
+GLfloat light2_diffuse[]  = {1.0, 1.0, 1.0, 1.0};
+GLfloat light2_specular[] = {1.0, 1.0, 1.0, 1.0};
+GLfloat light2_position[] = {-100.0, 100.0, 0.0, 1.0};
+bool light2_on = true;
 
 void tick(UNUSED int v) {
   // Run tick again, at approximately 60 FPS.
@@ -192,7 +177,7 @@ void tick(UNUSED int v) {
         << ")";
   glutSetWindowTitle(title.str().c_str());
 
-  // Calculated time elapsed since the last frame.
+  // Calculate time elapsed since the last frame.
   int time = glutGet(GLUT_ELAPSED_TIME);
   static int prev_time = 0;
   double dt = (time - prev_time) / 1000.0;
@@ -213,7 +198,6 @@ void tick(UNUSED int v) {
   }
 
   glutPostRedisplay();
-
   prev_time = time;
 }
 
@@ -277,6 +261,33 @@ void menu(int option) {
       eye[2] -= 1.0;
       break;
     case 3:
+      if (light0_on) {
+        glDisable(GL_LIGHT0);
+        light0_on = false;
+      } else {
+        glEnable(GL_LIGHT0);
+        light0_on = true;
+      }
+      break;
+    case 4:
+      if (light1_on) {
+        glDisable(GL_LIGHT1);
+        light1_on = false;
+      } else {
+        glEnable(GL_LIGHT1);
+        light1_on = true;
+      }
+      break;
+    case 5:
+      if (light2_on) {
+        glDisable(GL_LIGHT2);
+        light2_on = false;
+      } else {
+        glEnable(GL_LIGHT2);
+        light2_on = true;
+      }
+      break;
+    case 6:
       std::exit(0);
   }
 }
@@ -302,7 +313,10 @@ int main (int argc, char **argv) {
   glutCreateMenu(menu);
   glutAddMenuEntry("Increment Eye Z", 1);
   glutAddMenuEntry("Decrement Eye Z", 2);
-  glutAddMenuEntry("Quit", 3);
+  glutAddMenuEntry("Flip Light 0", 3);
+  glutAddMenuEntry("Flip Light 1", 4);
+  glutAddMenuEntry("Flip Light 2", 5);
+  glutAddMenuEntry("Quit", 6);
   glutAttachMenu(GLUT_RIGHT_BUTTON);
 
   // Set up the global lighting.
@@ -313,6 +327,7 @@ int main (int argc, char **argv) {
   glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
   glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, specular);
   glMaterialfv(GL_FRONT_AND_BACK, GL_EMISSION, emission);
+  glEnable(GL_COLOR_MATERIAL);
 
   // Set up the light source.
   glLightfv(GL_LIGHT0, GL_AMBIENT, light0_ambient);
@@ -320,9 +335,20 @@ int main (int argc, char **argv) {
   glLightfv(GL_LIGHT0, GL_SPECULAR, light0_specular);
   glLightfv(GL_LIGHT0, GL_POSITION, light0_position);
 
-  glEnable(GL_COLOR_MATERIAL);
+  glLightfv(GL_LIGHT1, GL_AMBIENT, light1_ambient);
+  glLightfv(GL_LIGHT1, GL_DIFFUSE, light1_diffuse);
+  glLightfv(GL_LIGHT1, GL_SPECULAR, light1_specular);
+  glLightfv(GL_LIGHT1, GL_POSITION, light1_position);
+
+  glLightfv(GL_LIGHT2, GL_AMBIENT, light2_ambient);
+  glLightfv(GL_LIGHT2, GL_DIFFUSE, light2_diffuse);
+  glLightfv(GL_LIGHT2, GL_SPECULAR, light2_specular);
+  glLightfv(GL_LIGHT2, GL_POSITION, light2_position);
+
   glEnable(GL_LIGHTING);
   glEnable(GL_LIGHT0);
+  glEnable(GL_LIGHT1);
+  glEnable(GL_LIGHT2);
   glShadeModel(GL_SMOOTH);
 
   glutMainLoop();

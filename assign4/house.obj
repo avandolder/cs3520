@@ -201,3 +201,30 @@ vertex 100.0 -1.0 -100.0
 vertex -100.0 -1.0 -100.0
 vertex -100.0 -1.0 100.0
 end
+
+# Road 1
+face
+color 0.2 0.2 0.2
+vertex 1.0 -0.98 100.0
+vertex 1.0 -0.98 -100.0
+vertex 2.0 -0.98 -100.0
+vertex 2.0 -0.98 100.0
+end
+
+# Road 2
+face
+color 0.2 0.2 0.2
+vertex 100.0 -0.99 5.0
+vertex 100.0 -0.99 4.0
+vertex -100.0 -0.99 4.0
+vertex -100.0 -0.99 5.0
+end
+
+# Road 3
+face
+color 0.2 0.2 0.2
+vertex 100.0 -0.99 -5.0
+vertex 100.0 -0.99 -4.0
+vertex -100.0 -0.99 -4.0
+vertex -100.0 -0.99 -5.0
+end
