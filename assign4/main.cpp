@@ -141,30 +141,30 @@ GLdouble width = 500.0, height = 500.0;
 int fps = 60;
 unsigned int frame_time = 1000 / fps;
 bool key_down[256] = {false};
-Vector eye {0.0, 0.0, 10.0};
+Vector eye {0.0, 5.0, 12.0};
 GLdouble horz_rot, vert_rot;
 
 GLfloat ambient[] = {0.2, 0.2, 0.2, 1.0};
-GLfloat diffuse[] = {0.9, 0.8, 0.5, 1.0};
+GLfloat diffuse[] = {1.0, 1.0, 1.0, 1.0};
 GLfloat specular[] = {1.0, 1.0, 1.0, 1.0};
 GLfloat emission[] = {0.0, 0.0, 0.0, 1.0};
 GLfloat global_ambient[] = {0.8, 0.8, 0.8, 1.0};
 
 GLfloat light0_ambient[]  = {0.0, 0.0, 0.0, 1.0};
-GLfloat light0_diffuse[]  = {1.0, 1.0, 1.0, 1.0};
-GLfloat light0_specular[] = {1.0, 1.0, 1.0, 1.0};
-GLfloat light0_position[] = {2.0, 2.0, 0.0, 1.0};
+GLfloat light0_diffuse[]  = {0.5, 0.5, 0.5, 1.0};
+GLfloat light0_specular[] = {0.5, 0.5, 0.5, 1.0};
+GLfloat light0_position[] = {10.0, 10.0, 10.0, 1.0};
 bool light0_on = true;
 
 GLfloat light1_ambient[]  = {0.0, 0.0, 0.0, 1.0};
-GLfloat light1_diffuse[]  = {1.0, 1.0, 1.0, 1.0};
-GLfloat light1_specular[] = {1.0, 1.0, 1.0, 1.0};
-GLfloat light1_position[] = {2.0, 2.0, 0.0, 1.0};
+GLfloat light1_diffuse[]  = {1.0, 0.2, 0.2, 1.0};
+GLfloat light1_specular[] = {1.0, 0.2, 0.2, 1.0};
+GLfloat light1_position[] = {2.0, 2.0, -10.0, 1.0};
 bool light1_on = true;
 
 GLfloat light2_ambient[]  = {0.0, 0.0, 0.0, 1.0};
-GLfloat light2_diffuse[]  = {1.0, 1.0, 1.0, 1.0};
-GLfloat light2_specular[] = {1.0, 1.0, 1.0, 1.0};
+GLfloat light2_diffuse[]  = {0.8, 0.8, 0.2, 1.0};
+GLfloat light2_specular[] = {0.8, 0.8, 0.2, 1.0};
 GLfloat light2_position[] = {-100.0, 100.0, 0.0, 1.0};
 bool light2_on = true;
 
