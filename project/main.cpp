@@ -7,7 +7,6 @@
 #include <cstdlib>
 #include <fstream>
 #include <iostream>
-#include <sstream>
 #include <string>
 #include <vector>
 
@@ -28,10 +27,10 @@ using Vec4 = std::array<GLfloat, 4>;
 // A Polygon is (potentially coloured) surface made up of vertices.
 struct Polygon {
   std::vector<Vec3> vertices;
-  GLfloat color[3];
+  Vec3 color;
 
   // Create a polygon based on data from an input stream.
-  static Polygon read(std::istream& in) {
+  static auto read(std::istream& in) -> Polygon {
     Polygon p;
 
     while (!in.eof()) {
@@ -62,7 +61,7 @@ struct Polygon {
     return p;
   }
 
-  inline Vec3& operator[](int idx) { return vertices[idx]; }
+  inline auto operator[](int idx) -> Vec3& { return vertices[idx]; }
 };
 
 // An Object is a collection of polygons with a defined origin and rotation.
@@ -72,7 +71,7 @@ struct Object {
   GLfloat rotation_angle = 0.0;
   std::vector<Polygon> faces;
 
-  static Object read(const std::string& path) {
+  static auto read(const std::string& path) -> Object {
     std::ifstream file(path);
     Object object;
 
@@ -103,16 +102,16 @@ struct Object {
     return object;
   }
 
-  void render() {
+  auto render() -> void {
     glPushMatrix();
-    glTranslated(origin[0], origin[1], origin[2]);
-    glRotated(rotation_angle,
+    glTranslatef(origin[0], origin[1], origin[2]);
+    glRotatef(rotation_angle,
               rotation_axis[0],
               rotation_axis[1],
               rotation_axis[2]);
 
     for (auto& face : faces) {
-      glColor3d(face.color[0], face.color[1], face.color[2]);
+      glColor3fv(face.color.data());
       glBegin(GL_POLYGON);
       for (auto& v : face.vertices) {
         glNormal3fv(v.data());
@@ -163,34 +162,32 @@ struct Light {
   bool enabled;
 };
 
-GLdouble width = 500.0, height = 500.0;
+GLfloat width = 500.0, height = 500.0;
 int fps = 60;
 unsigned int frame_time = 1000 / fps;
 bool key_down[256] = {false};
 Vec3 eye {0.0, 5.0, 12.0};
-GLdouble horz_rot, vert_rot;
+GLfloat horz_rot, vert_rot;
 
 GLfloat global_specular[] = {1.0, 1.0, 1.0, 1.0};
 GLfloat global_emission[] = {0.0, 0.0, 0.0, 1.0};
 GLfloat global_ambient[] = {0.8, 0.8, 0.8, 1.0};
 
-Object house;
-
+std::vector<Object> world;
 std::vector<Light> lights;
 
-void tick(UNUSED int v) {
+Object vehicle;
+Object pedestrian;
+
+auto tick(UNUSED int v) -> void {
   // Run tick again, at approximately 60 FPS.
   glutTimerFunc(frame_time, tick, 0);
-
-  std::stringstream title;
-  title << "Assignment 2 (X:" << eye[0] << " Y:" << eye[1] << " Z:" << eye[2]
-        << ")";
-  glutSetWindowTitle(title.str().c_str());
 
   // Calculate time elapsed since the last frame.
   int time = glutGet(GLUT_ELAPSED_TIME);
   static int prev_time = 0;
   double dt = (time - prev_time) / 1000.0;
+  prev_time = time;
 
   // Rotate the house object, wrapping around at 360 degrees to prevent
   // overflow.
@@ -207,15 +204,19 @@ void tick(UNUSED int v) {
     vert_rot = std::fmod(vert_rot - 360*dt/2, 360);
   }
 
+  if (key_down[27]) {
+    // Quit on escape key.
+    std::exit(0);
+  }
+
   glutPostRedisplay();
-  prev_time = time;
 }
 
-void render() {
+auto render() -> void {
   // Set up the view.
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  gluPerspective(40.0, (GLdouble)width / height, 1.0, 100.0);
+  gluPerspective(40.0, width / height, 1.0, 100.0);
 
   // Set up the camera to look at the origin.
   glMatrixMode(GL_MODELVIEW);
@@ -227,17 +228,19 @@ void render() {
 
   glRotatef(horz_rot, 0.0, 1.0, 0.0);
   glRotatef(vert_rot, 1.0, 0.0, 0.0);
-  house.render();
+  for (auto& object : world) {
+    object.render();
+  }
 
   glutSwapBuffers();
 }
 
-void reshape(int w, int h) {
+auto reshape(int w, int h) -> void {
   width = w;
   height = h;
 }
 
-void handle_mouse(int button, int state, int x, int y) {
+auto handle_mouse(int button, int state, int x, int y) -> void {
   if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
     // Normalize the pixel coordinates to the [-1, 1] interval.
     GLfloat dx = (x * 2.0) / width - 1.0;
@@ -248,21 +251,16 @@ void handle_mouse(int button, int state, int x, int y) {
   }
 }
 
-void handle_key(unsigned char key, UNUSED int x, UNUSED int y) {
-  if (key == 27) {
-    // Quit on escape key.
-    std::exit(0);
-  }
-
+auto handle_key(unsigned char key, UNUSED int x, UNUSED int y) -> void {
   // Use a key_down array so that held keys will be repeated.
   key_down[key] = true;
 }
 
-void handle_keyup(unsigned char key, UNUSED int x, UNUSED int y) {
+auto handle_keyup(unsigned char key, UNUSED int x, UNUSED int y) -> void {
   key_down[key] = false;
 }
 
-void menu(int option) {
+auto menu(int option) -> void {
   switch (option) {
     case 1:
       eye[2] += 1.0;
@@ -284,14 +282,13 @@ void menu(int option) {
   }
 }
 
-int main (int argc, char **argv) {
+auto main (int argc, char **argv) -> int {
   // Initialize OpenGL and GLUT.
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGBA | GLUT_DEPTH);
   glutInitWindowSize(width, height);
   glutInitWindowPosition(0, 0);
-  glutCreateWindow("Assignment 3");
-  glEnable(GL_DEPTH_TEST);
+  glutCreateWindow("COMP3520 Project");
 
   // Add the appropriate callbacks.
   glutDisplayFunc(render);
@@ -322,38 +319,33 @@ int main (int argc, char **argv) {
   glEnable(GL_COLOR_MATERIAL);
 
   // Initialize the lights.
-  lights.emplace_back(
-    GL_LIGHT0,
-    Vec4{0.0, 0.0, 0.0, 1.0}, // ambient
-    Vec4{0.5, 0.5, 0.5, 1.0}, // diffuse
-    Vec4{0.5, 0.5, 0.5, 1.0}, // specular
-    Vec4{10.0, 10.0, 10.0, 1.0} // position
-  );
+  lights.emplace_back(GL_LIGHT0,
+                      Vec4{0.0, 0.0, 0.0, 1.0}, // ambient
+                      Vec4{0.5, 0.5, 0.5, 1.0}, // diffuse
+                      Vec4{0.5, 0.5, 0.5, 1.0}, // specular
+                      Vec4{10.0, 10.0, 10.0, 1.0}); // position
 
-  lights.emplace_back(
-    GL_LIGHT1,
-    Vec4{0.0, 0.0, 0.0, 1.0},
-    Vec4{1.0, 0.2, 0.2, 1.0},
-    Vec4{1.0, 0.2, 0.2, 1.0},
-    Vec4{2.0, 2.0, -10.0, 1.0}
-  );
+  lights.emplace_back(GL_LIGHT1,
+                      Vec4{0.0, 0.0, 0.0, 1.0},
+                      Vec4{1.0, 0.2, 0.2, 1.0},
+                      Vec4{1.0, 0.2, 0.2, 1.0},
+                      Vec4{2.0, 2.0, -10.0, 1.0});
 
-  lights.emplace_back(
-    GL_LIGHT2,
-    Vec4{0.0, 0.0, 0.0, 1.0},
-    Vec4{0.8, 0.8, 0.2, 1.0},
-    Vec4{0.8, 0.8, 0.2, 1.0},
-    Vec4{-100.0, 100.0, 0.0, 1.0}
-  );
+  lights.emplace_back(GL_LIGHT2,
+                      Vec4{0.0, 0.0, 0.0, 1.0},
+                      Vec4{0.8, 0.8, 0.2, 1.0},
+                      Vec4{0.8, 0.8, 0.2, 1.0},
+                      Vec4{-100.0, 100.0, 0.0, 1.0});
 
   glEnable(GL_LIGHTING);
+  glEnable(GL_DEPTH_TEST);
+  glShadeModel(GL_SMOOTH);
   for (auto& light : lights) {
     light.enable();
   }
-  glShadeModel(GL_SMOOTH);
 
   // Load in the house object.
-  house = Object::read("house.obj");
+  world.push_back(Object::read("house.obj"));
 
   glutMainLoop();
 }
