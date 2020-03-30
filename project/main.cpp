@@ -165,7 +165,10 @@ struct Light {
 GLfloat width = 500.0, height = 500.0;
 int fps = 60;
 unsigned int frame_time = 1000 / fps;
+
+// Use a key_down array so that held keys will be repeated.
 bool key_down[256] = {false};
+
 Vec3 eye {0.0, 5.0, 12.0};
 GLfloat horz_rot, vert_rot;
 
@@ -175,7 +178,6 @@ GLfloat global_ambient[] = {0.8, 0.8, 0.8, 1.0};
 
 std::vector<Object> world;
 std::vector<Light> lights;
-
 Object vehicle;
 Object pedestrian;
 
@@ -231,6 +233,8 @@ auto render() -> void {
   for (auto& object : world) {
     object.render();
   }
+  vehicle.render();
+  pedestrian.render();
 
   glutSwapBuffers();
 }
@@ -252,7 +256,6 @@ auto handle_mouse(int button, int state, int x, int y) -> void {
 }
 
 auto handle_key(unsigned char key, UNUSED int x, UNUSED int y) -> void {
-  // Use a key_down array so that held keys will be repeated.
   key_down[key] = true;
 }
 
@@ -269,13 +272,9 @@ auto menu(int option) -> void {
       eye[2] -= 1.0;
       break;
     case 3:
-      lights[0].toggle();
-      break;
     case 4:
-      lights[1].toggle();
-      break;
     case 5:
-      lights[2].toggle();
+      lights[option - 3].toggle();
       break;
     case 6:
       std::exit(0);
