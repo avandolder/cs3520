@@ -6,7 +6,9 @@
 #include <cmath>
 #include <cstdlib>
 #include <fstream>
+#include <initializer_list>
 #include <iostream>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -21,18 +23,18 @@
 #  define UNUSED
 #endif
 
-using Vec3 = std::array<GLfloat, 3>;
-using Vec4 = std::array<GLfloat, 4>;
+template<size_t N>
+using Vec = std::array<GLfloat, N>;
 
-// A Polygon is (potentially coloured) surface made up of vertices.
+// A Polygon is coloured surface made up of vertices.
 struct Polygon {
-  std::vector<Vec3> vertices;
-  Vec3 color;
+  Vec<3> color;
+  std::vector<Vec<3>> vertices;
+
+  Polygon() = default;
 
   // Create a polygon based on data from an input stream.
-  static auto read(std::istream& in) -> Polygon {
-    Polygon p;
-
+  Polygon(std::istream& in) {
     while (!in.eof()) {
       if ((in >> std::ws).peek() == '#') {
         // If the first non-whitespace character is a #, the line is a comment
@@ -44,36 +46,40 @@ struct Polygon {
       std::string command;
       in >> command;
       if (command == "vertex") {
-        Vec3 v;
+        Vec<3> v;
         in >> v[0];
         in >> v[1];
         in >> v[2];
-        p.vertices.push_back(v);
+        vertices.push_back(v);
       } else if (command == "color") {
-        in >> p.color[0];
-        in >> p.color[1];
-        in >> p.color[2];
+        in >> color[0];
+        in >> color[1];
+        in >> color[2];
       } else if (command == "end") {
         break;
       }
     }
-
-    return p;
   }
 
-  inline auto operator[](int idx) -> Vec3& { return vertices[idx]; }
+  // Create a polygon from a given color and list of vertices.
+  Polygon(std::initializer_list<Vec<3>> vertices, Vec<3> color)
+    : color{color}, vertices{vertices} {
+  }
+
+  inline auto operator[](int idx) -> Vec<3>& { return vertices[idx]; }
 };
 
 // An Object is a collection of polygons with a defined origin and rotation.
 struct Object {
-  Vec3 origin;
-  Vec3 rotation_axis;
+  Vec<3> origin;
+  Vec<3> rotation_axis;
   GLfloat rotation_angle = 0.0;
   std::vector<Polygon> faces;
 
-  static auto read(const std::string& path) -> Object {
+  Object() = default;
+
+  Object(const std::string& path) {
     std::ifstream file(path);
-    Object object;
 
     while (!file.eof()) {
       if ((file >> std::ws).peek() == '#') {
@@ -86,20 +92,18 @@ struct Object {
       std::string type;
       file >> type;
       if (type == "origin") {
-        file >> object.origin[0];
-        file >> object.origin[1];
-        file >> object.origin[2];
+        file >> origin[0];
+        file >> origin[1];
+        file >> origin[2];
       } else if (type == "rotation") {
-        file >> object.rotation_angle;
-        file >> object.rotation_axis[0];
-        file >> object.rotation_axis[1];
-        file >> object.rotation_axis[2];
+        file >> rotation_angle;
+        file >> rotation_axis[0];
+        file >> rotation_axis[1];
+        file >> rotation_axis[2];
       } else if (type == "face") {
-        object.faces.push_back(Polygon::read(file));
+        faces.emplace_back(file);
       }
     }
-
-    return object;
   }
 
   auto render() -> void {
@@ -126,10 +130,10 @@ struct Object {
 
 struct Light {
   Light(GLenum light_id,
-        Vec4 ambient,
-        Vec4 diffuse,
-        Vec4 specular,
-        Vec4 position)
+        Vec<4> ambient,
+        Vec<4> diffuse,
+        Vec<4> specular,
+        Vec<4> position)
       : light_id{light_id},
         enabled{false} {
     glLightfv(light_id, GL_AMBIENT, ambient.data());
@@ -169,7 +173,7 @@ unsigned int frame_time = 1000 / fps;
 // Use a key_down array so that held keys will be repeated.
 bool key_down[256] = {false};
 
-Vec3 eye {0.0, 5.0, 12.0};
+Vec<3> eye {10.0, 100.0, 10.0};
 GLfloat horz_rot, vert_rot;
 
 GLfloat global_specular[] = {1.0, 1.0, 1.0, 1.0};
@@ -180,6 +184,74 @@ std::vector<Object> world;
 std::vector<Light> lights;
 Object vehicle;
 Object pedestrian;
+
+auto create_building(Vec<3> origin, Vec<2> size, Vec<3> color) -> Object {
+  // Buildings are made up of 5 polygons, the 4 walls and the roof.
+  Object building;
+  building.origin = origin;
+
+  building.faces.push_back(Polygon({
+      {size[0], size[1], size[0]},
+      {size[0], 0, size[0]},
+      {size[0], 0, 0},
+      {size[0], size[1], 0},
+    },
+    color
+  ));
+
+  building.faces.push_back(Polygon({
+      {size[0], size[1], size[0]},
+      {size[0], 0, size[0]},
+      {0, 0, size[0]},
+      {0, size[1], size[0]},
+    },
+    color
+  ));
+
+  building.faces.push_back(Polygon({
+      {0, size[1], size[0]},
+      {0, 0, size[0]},
+      {0, 0, 0},
+      {0, size[1], 0},
+    },
+    color
+  ));
+
+  building.faces.push_back(Polygon({
+      {size[0], size[1], 0},
+      {size[0], 0, 0},
+      {0, 0, 0},
+      {0, size[1], 0},
+    },
+    color
+  ));
+
+  building.faces.push_back(Polygon({
+      {size[0], size[1], size[0]},
+      {size[0], size[1], 0},
+      {0, size[1], 0},
+      {0, size[1], size[0]},
+    },
+    color
+  ));
+
+  return building;
+}
+
+auto create_plane(Vec<3> origin, Vec<2> size, Vec<3> color) -> Object {
+  Object plane;
+  plane.origin = origin;
+  plane.faces.push_back(Polygon({
+      {0, 0, 0},
+      {size[0], 0, 0},
+      {size[0], 0, size[1]},
+      {0, 0, size[1]},
+    },
+    color
+  ));
+
+  return plane;
+}
 
 auto tick(UNUSED int v) -> void {
   // Run tick again, at approximately 60 FPS.
@@ -218,7 +290,7 @@ auto render() -> void {
   // Set up the view.
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  gluPerspective(40.0, width / height, 1.0, 100.0);
+  gluPerspective(40.0, width / height, 1.0, 1000.0);
 
   // Set up the camera to look at the origin.
   glMatrixMode(GL_MODELVIEW);
@@ -266,10 +338,10 @@ auto handle_keyup(unsigned char key, UNUSED int x, UNUSED int y) -> void {
 auto menu(int option) -> void {
   switch (option) {
     case 1:
-      eye[2] += 1.0;
+      eye[2] += 5.0;
       break;
     case 2:
-      eye[2] -= 1.0;
+      eye[2] -= 5.0;
       break;
     case 3:
     case 4:
@@ -319,32 +391,56 @@ auto main (int argc, char **argv) -> int {
 
   // Initialize the lights.
   lights.emplace_back(GL_LIGHT0,
-                      Vec4{0.0, 0.0, 0.0, 1.0}, // ambient
-                      Vec4{0.5, 0.5, 0.5, 1.0}, // diffuse
-                      Vec4{0.5, 0.5, 0.5, 1.0}, // specular
-                      Vec4{10.0, 10.0, 10.0, 1.0}); // position
+                      Vec<4>{0.0, 0.0, 0.0, 1.0}, // ambient
+                      Vec<4>{0.5, 0.5, 0.5, 1.0}, // diffuse
+                      Vec<4>{0.5, 0.5, 0.5, 1.0}, // specular
+                      Vec<4>{10.0, 10.0, 10.0, 1.0}); // position
 
   lights.emplace_back(GL_LIGHT1,
-                      Vec4{0.0, 0.0, 0.0, 1.0},
-                      Vec4{1.0, 0.2, 0.2, 1.0},
-                      Vec4{1.0, 0.2, 0.2, 1.0},
-                      Vec4{2.0, 2.0, -10.0, 1.0});
+                      Vec<4>{0.0, 0.0, 0.0, 1.0},
+                      Vec<4>{1.0, 0.2, 0.2, 1.0},
+                      Vec<4>{1.0, 0.2, 0.2, 1.0},
+                      Vec<4>{2.0, 2.0, -10.0, 1.0});
 
   lights.emplace_back(GL_LIGHT2,
-                      Vec4{0.0, 0.0, 0.0, 1.0},
-                      Vec4{0.8, 0.8, 0.2, 1.0},
-                      Vec4{0.8, 0.8, 0.2, 1.0},
-                      Vec4{-100.0, 100.0, 0.0, 1.0});
+                      Vec<4>{0.0, 0.0, 0.0, 1.0},
+                      Vec<4>{0.8, 0.8, 0.2, 1.0},
+                      Vec<4>{0.8, 0.8, 0.2, 1.0},
+                      Vec<4>{-100.0, 100.0, 0.0, 1.0});
 
   glEnable(GL_LIGHTING);
   glEnable(GL_DEPTH_TEST);
   glShadeModel(GL_SMOOTH);
   for (auto& light : lights) {
-    light.enable();
+    // light.enable();
   }
 
-  // Load in the house object.
-  world.push_back(Object::read("house.obj"));
+  // Add grass/ground.
+  world.push_back(create_plane({-100.0, 0.0, -100.0}, {200.0, 200.0}, {0.2, 1.0, 0.2}));
+  // Add the road.
+  world.push_back(create_plane({-100.0, 0.01, -5.0}, {200.0, 10.0}, {0.3, 0.3, 0.3}));
+  // Add sidewalks.
+  world.push_back(create_plane({-100.0, 0.02, -8.0}, {200.0, 3.0}, {0.6, 0.6, 0.6}));
+  world.push_back(create_plane({-100.0, 0.02, 5.0}, {200.0, 3.0}, {0.6, 0.6, 0.6}));
+
+  // Create a RNG for generating random buildings.
+  std::random_device rd;
+  std::mt19937 gen(rd());
+  std::uniform_int_distribution<> dis(0, 10);
+  std::uniform_real_distribution<> color_dis(0.0, 1.0);
+  int x = 50;
+  // Add buildings next to the road.
+  for (int i = 0; i < 10; i++) {
+    int bw = 10 + dis(gen);
+    int bh = 15 + 2 * dis(gen);
+    x -= bw;
+
+    float r = color_dis(gen);
+    float g = color_dis(gen);
+    float b = color_dis(gen);
+
+    world.push_back(create_building({x, 0.0, 8.0}, {bw, bh}, {r, g, b}));
+  }
 
   glutMainLoop();
 }
