@@ -66,6 +66,16 @@ struct Polygon {
     : color{color}, vertices{vertices} {
   }
 
+  auto render() -> void {
+    glColor3fv(color.data());
+    glBegin(GL_POLYGON);
+    for (auto& v : vertices) {
+      glNormal3fv(v.data());
+      glVertex3f(v[0], v[1], v[2]);
+    }
+    glEnd();
+  }
+
   inline auto operator[](int idx) -> Vec<3>& { return vertices[idx]; }
 };
 
@@ -115,13 +125,7 @@ struct Object {
               rotation_axis[2]);
 
     for (auto& face : faces) {
-      glColor3fv(face.color.data());
-      glBegin(GL_POLYGON);
-      for (auto& v : face.vertices) {
-        glNormal3fv(v.data());
-        glVertex3f(v[0], v[1], v[2]);
-      }
-      glEnd();
+      face.render();
     }
 
     glPopMatrix();
@@ -141,7 +145,7 @@ struct Light {
     glLightfv(light_id, GL_SPECULAR, specular.data());
     glLightfv(light_id, GL_POSITION, position.data());
   }
-  
+
   auto enable() -> void {
     glEnable(light_id);
     enabled = true;
@@ -173,7 +177,7 @@ unsigned int frame_time = 1000 / fps;
 // Use a key_down array so that held keys will be repeated.
 bool key_down[256] = {false};
 
-Vec<3> eye {0.0, 125.0, -75.0};
+Vec<3> eye {0.0, 75.0, -100.0};
 GLfloat horz_rot, vert_rot;
 
 GLfloat global_specular[] = {1.0, 1.0, 1.0, 1.0};
@@ -290,7 +294,7 @@ auto render() -> void {
   // Set up the view.
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
-  gluPerspective(40.0, width / height, 1.0, 1000.0);
+  gluPerspective(75.0, width / height, 1.0, 1000.0);
 
   // Set up the camera to look at the origin.
   glMatrixMode(GL_MODELVIEW);
@@ -411,10 +415,10 @@ auto main (int argc, char **argv) -> int {
   glEnable(GL_LIGHTING);
   glEnable(GL_DEPTH_TEST);
   glShadeModel(GL_SMOOTH);
-  for (auto& light : lights) {
-    // light.enable();
-  }
-  
+  // for (auto& light : lights) {
+  //   light.enable();
+  // }
+
   // Add skybox.
   world.push_back(create_box({-100, 0.0, -100.0}, {200.0, 200.0}, {0.5, 0.8, 1.0}));
   // Add grass/ground.
@@ -430,11 +434,12 @@ auto main (int argc, char **argv) -> int {
   std::mt19937 gen(rd());
   std::uniform_int_distribution<> dis(0, 20);
   std::uniform_real_distribution<> color_dis(0.0, 1.0);
-  int x = 100;
+
   // Add boxs next to the road.
+  float x = 100;
   while (x > -100) {
-    int bw = 5 + dis(gen);
-    int bh = 10 + 2 * dis(gen);
+    float bw = 5 + dis(gen);
+    float bh = 10 + 2 * dis(gen);
     x -= bw;
 
     float r = color_dis(gen);
