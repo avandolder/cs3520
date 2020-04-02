@@ -173,7 +173,7 @@ unsigned int frame_time = 1000 / fps;
 // Use a key_down array so that held keys will be repeated.
 bool key_down[256] = {false};
 
-Vec<3> eye {10.0, 100.0, 10.0};
+Vec<3> eye {0.0, 125.0, -75.0};
 GLfloat horz_rot, vert_rot;
 
 GLfloat global_specular[] = {1.0, 1.0, 1.0, 1.0};
@@ -185,12 +185,12 @@ std::vector<Light> lights;
 Object vehicle;
 Object pedestrian;
 
-auto create_building(Vec<3> origin, Vec<2> size, Vec<3> color) -> Object {
-  // Buildings are made up of 5 polygons, the 4 walls and the roof.
-  Object building;
-  building.origin = origin;
+auto create_box(Vec<3> origin, Vec<2> size, Vec<3> color) -> Object {
+  // boxs are made up of 5 polygons, the 4 walls and the roof.
+  Object box;
+  box.origin = origin;
 
-  building.faces.push_back(Polygon({
+  box.faces.push_back(Polygon({
       {size[0], size[1], size[0]},
       {size[0], 0, size[0]},
       {size[0], 0, 0},
@@ -199,7 +199,7 @@ auto create_building(Vec<3> origin, Vec<2> size, Vec<3> color) -> Object {
     color
   ));
 
-  building.faces.push_back(Polygon({
+  box.faces.push_back(Polygon({
       {size[0], size[1], size[0]},
       {size[0], 0, size[0]},
       {0, 0, size[0]},
@@ -208,7 +208,7 @@ auto create_building(Vec<3> origin, Vec<2> size, Vec<3> color) -> Object {
     color
   ));
 
-  building.faces.push_back(Polygon({
+  box.faces.push_back(Polygon({
       {0, size[1], size[0]},
       {0, 0, size[0]},
       {0, 0, 0},
@@ -217,7 +217,7 @@ auto create_building(Vec<3> origin, Vec<2> size, Vec<3> color) -> Object {
     color
   ));
 
-  building.faces.push_back(Polygon({
+  box.faces.push_back(Polygon({
       {size[0], size[1], 0},
       {size[0], 0, 0},
       {0, 0, 0},
@@ -226,7 +226,7 @@ auto create_building(Vec<3> origin, Vec<2> size, Vec<3> color) -> Object {
     color
   ));
 
-  building.faces.push_back(Polygon({
+  box.faces.push_back(Polygon({
       {size[0], size[1], size[0]},
       {size[0], size[1], 0},
       {0, size[1], 0},
@@ -235,7 +235,7 @@ auto create_building(Vec<3> origin, Vec<2> size, Vec<3> color) -> Object {
     color
   ));
 
-  return building;
+  return box;
 }
 
 auto create_plane(Vec<3> origin, Vec<2> size, Vec<3> color) -> Object {
@@ -414,7 +414,9 @@ auto main (int argc, char **argv) -> int {
   for (auto& light : lights) {
     // light.enable();
   }
-
+  
+  // Add skybox.
+  world.push_back(create_box({-100, 0.0, -100.0}, {200.0, 200.0}, {0.5, 0.8, 1.0}));
   // Add grass/ground.
   world.push_back(create_plane({-100.0, 0.0, -100.0}, {200.0, 200.0}, {0.2, 1.0, 0.2}));
   // Add the road.
@@ -426,20 +428,20 @@ auto main (int argc, char **argv) -> int {
   // Create a RNG for generating random buildings.
   std::random_device rd;
   std::mt19937 gen(rd());
-  std::uniform_int_distribution<> dis(0, 10);
+  std::uniform_int_distribution<> dis(0, 20);
   std::uniform_real_distribution<> color_dis(0.0, 1.0);
-  int x = 50;
-  // Add buildings next to the road.
-  for (int i = 0; i < 10; i++) {
-    int bw = 10 + dis(gen);
-    int bh = 15 + 2 * dis(gen);
+  int x = 100;
+  // Add boxs next to the road.
+  while (x > -100) {
+    int bw = 5 + dis(gen);
+    int bh = 10 + 2 * dis(gen);
     x -= bw;
 
     float r = color_dis(gen);
     float g = color_dis(gen);
     float b = color_dis(gen);
 
-    world.push_back(create_building({x, 0.0, 8.0}, {bw, bh}, {r, g, b}));
+    world.push_back(create_box({x, 0.0, 8.0}, {bw, bh}, {r, g, b}));
   }
 
   glutMainLoop();
