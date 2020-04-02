@@ -83,7 +83,7 @@ struct Polygon {
 struct Object {
   Vec<3> origin;
   Vec<3> rotation_axis;
-  GLfloat rotation_angle = 0.0;
+  GLfloat rotation_angle{0.0};
   std::vector<Polygon> faces;
 
   Object() = default;
@@ -177,17 +177,23 @@ unsigned int frame_time = 1000 / fps;
 // Use a key_down array so that held keys will be repeated.
 bool key_down[256] = {false};
 
+// Create a RNG for generating random buildings and deciding
+// when to send out a pedestrian.
+std::random_device rd;
+std::mt19937 gen(rd());
+
 Vec<3> eye {0.0, 75.0, -90.0};
 GLfloat horz_rot, vert_rot;
 
-GLfloat global_specular[] = {1.0, 1.0, 1.0, 1.0};
-GLfloat global_emission[] = {0.0, 0.0, 0.0, 1.0};
-GLfloat global_ambient[] = {0.8, 0.8, 0.8, 1.0};
+GLfloat global_specular[] {0.5, 0.5, 0.5, 1.0};
+GLfloat global_emission[] {0.0, 0.0, 0.0, 1.0};
+GLfloat global_ambient[] {0.8, 0.8, 0.8, 1.0};
 
 std::vector<Object> world;
 std::vector<Light> lights;
 Object car;
 Object pedestrian;
+bool is_pedestrian_crossing{false};
 
 float car_speed = 50.0;
 
@@ -289,6 +295,24 @@ auto tick(UNUSED int v) -> void {
     std::exit(0);
   }
 
+  if (!is_pedestrian_crossing) {
+    // Send out a pedestrian randomly, on average every 4 seconds.
+    std::uniform_int_distribution<> dis(1, fps * 4);
+    if (dis(gen) == 1) {
+      is_pedestrian_crossing = true;
+
+      std::uniform_real_distribution<> x_position_dis(-75.0, 75.0);
+      pedestrian.origin = {(float)x_position_dis(gen), 0.0, 6.0};
+    }
+  } else {
+    pedestrian.origin[2] -= dt * 1.0;
+
+    if (pedestrian.origin[2] < -6) {
+      pedestrian.origin[2] = 6.0;
+      is_pedestrian_crossing = false;
+    }
+  }
+
   // Move the car.
   car.origin[0] += dt * car_speed;
   if (car.origin[0] < -100.0 || car.origin[0] > 100.0) {
@@ -322,7 +346,10 @@ auto render() -> void {
     object.render();
   }
   car.render();
-  pedestrian.render();
+
+  if (is_pedestrian_crossing) {
+    pedestrian.render();
+  }
 
   glutSwapBuffers();
 }
@@ -353,18 +380,12 @@ auto handle_keyup(unsigned char key, UNUSED int x, UNUSED int y) -> void {
 
 auto menu(int option) -> void {
   switch (option) {
+    case 0:
     case 1:
-      eye[2] += 5.0;
-      break;
     case 2:
-      eye[2] -= 5.0;
+      lights[option].toggle();
       break;
     case 3:
-    case 4:
-    case 5:
-      lights[option - 3].toggle();
-      break;
-    case 6:
       std::exit(0);
   }
 }
@@ -387,12 +408,10 @@ auto main (int argc, char **argv) -> int {
 
   // Create the context menu.
   glutCreateMenu(menu);
-  glutAddMenuEntry("Increment Eye Z", 1);
-  glutAddMenuEntry("Decrement Eye Z", 2);
-  glutAddMenuEntry("Toggle Light 0", 3);
-  glutAddMenuEntry("Toggle Light 1", 4);
-  glutAddMenuEntry("Toggle Light 2", 5);
-  glutAddMenuEntry("Quit", 6);
+  glutAddMenuEntry("Toggle Light 0", 0);
+  glutAddMenuEntry("Toggle Light 1", 1);
+  glutAddMenuEntry("Toggle Light 2", 2);
+  glutAddMenuEntry("Quit", 3);
   glutAttachMenu(GLUT_RIGHT_BUTTON);
 
   // Set up the global lighting.
@@ -420,16 +439,16 @@ auto main (int argc, char **argv) -> int {
 
   lights.emplace_back(GL_LIGHT2,
                       Vec<4>{0.0, 0.0, 0.0, 1.0},
-                      Vec<4>{0.8, 0.8, 0.2, 1.0},
-                      Vec<4>{0.8, 0.8, 0.2, 1.0},
-                      Vec<4>{-100.0, 100.0, 0.0, 1.0});
+                      Vec<4>{0.2, 0.2, 0.1, 1.0},
+                      Vec<4>{0.2, 0.2, 0.1, 1.0},
+                      Vec<4>{-90.0, 90.0, 0.0, 1.0});
 
   glEnable(GL_LIGHTING);
   glEnable(GL_DEPTH_TEST);
   glShadeModel(GL_SMOOTH);
-  // for (auto& light : lights) {
-  //   light.enable();
-  // }
+  for (auto& light : lights) {
+    light.enable();
+  }
 
   // Add skybox.
   world.push_back(create_box({-100, 0.0, -100.0}, {200.0, 200.0}, {0.5, 0.8, 1.0}));
@@ -441,9 +460,6 @@ auto main (int argc, char **argv) -> int {
   world.push_back(create_plane({-100.0, 0.02, -8.0}, {200.0, 3.0}, {0.6, 0.6, 0.6}));
   world.push_back(create_plane({-100.0, 0.02, 5.0}, {200.0, 3.0}, {0.6, 0.6, 0.6}));
 
-  // Create a RNG for generating random buildings.
-  std::random_device rd;
-  std::mt19937 gen(rd());
   std::uniform_int_distribution<> dis(0, 20);
   std::uniform_real_distribution<> color_dis(0.0, 1.0);
 
@@ -462,6 +478,7 @@ auto main (int argc, char **argv) -> int {
   }
 
   car = Object("car.obj");
+  pedestrian = Object("guy.obj");
 
   glutMainLoop();
 }
