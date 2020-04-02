@@ -1,0 +1,79 @@
+origin 0.0 0.0 0.0
+rotation 0.0 0.0 1.0 0.0
+
+# windshield
+face
+color 0.2 0.8 0.8
+vertex 2.0 1.0 -1.0
+vertex 2.0 1.0 1.0
+vertex 0.0 1.5 1.0
+vertex 0.0 1.5 -1.0
+end
+
+# hood
+face
+color 0.8 0.2 0.0
+vertex 2.0 1.0 -1.0
+vertex 2.0 1.0 1.0
+vertex 3.0 1.0 1.0
+vertex 3.0 1.0 -1.0
+end
+
+# front bumper
+face
+color 0.8 0.2 0.0
+vertex 3.0 1.0 1.0
+vertex 3.0 1.0 -1.0
+vertex 3.0 0.5 -1.0
+vertex 3.0 0.5 1.0
+end
+
+# rear bumper
+face
+color 0.8 0.2 0.0
+vertex -2.5 1.0 1.0
+vertex -2.5 1.0 -1.0
+vertex -2.5 0.5 -1.0
+vertex -2.5 0.5 1.0
+end
+
+# Sides
+face
+color 0.8 0.2 0.0
+vertex 3.0 0.5 1.0
+vertex 3.0 1.0 1.0
+vertex 2.0 1.0 1.0
+vertex 0.0 1.5 1.0
+vertex -2.0 1.5 1.0
+vertex -2.5 1.0 1.0
+vertex -2.5 0.5 1.0
+end
+
+face
+color 0.8 0.2 0.0
+vertex 3.0 0.5 -1.0
+vertex 3.0 1.0 -1.0
+vertex 2.0 1.0 -1.0
+vertex 0.0 1.5 -1.0
+vertex -2.0 1.5 -1.0
+vertex -2.5 1.0 -1.0
+vertex -2.5 0.5 -1.0
+end
+
+# Roof
+face
+color 0.8 0.2 0.0
+vertex 0.0 1.5 -1.0
+vertex 0.0 1.5 1.0
+vertex -2.0 1.5 1.0
+vertex -2.0 1.5 -1.0
+end
+
+# Rear window
+face
+color 0.2 0.8 0.8
+vertex -2.0 1.5 1.0
+vertex -2.5 1.0 1.0
+vertex -2.5 1.0 -1.0
+vertex -2.0 1.5 -1.0
+end

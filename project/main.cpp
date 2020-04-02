@@ -177,7 +177,7 @@ unsigned int frame_time = 1000 / fps;
 // Use a key_down array so that held keys will be repeated.
 bool key_down[256] = {false};
 
-Vec<3> eye {0.0, 75.0, -100.0};
+Vec<3> eye {0.0, 75.0, -90.0};
 GLfloat horz_rot, vert_rot;
 
 GLfloat global_specular[] = {1.0, 1.0, 1.0, 1.0};
@@ -186,8 +186,10 @@ GLfloat global_ambient[] = {0.8, 0.8, 0.8, 1.0};
 
 std::vector<Object> world;
 std::vector<Light> lights;
-Object vehicle;
+Object car;
 Object pedestrian;
+
+float car_speed = 50.0;
 
 auto create_box(Vec<3> origin, Vec<2> size, Vec<3> color) -> Object {
   // boxs are made up of 5 polygons, the 4 walls and the roof.
@@ -287,6 +289,16 @@ auto tick(UNUSED int v) -> void {
     std::exit(0);
   }
 
+  // Move the car.
+  car.origin[0] += dt * car_speed;
+  if (car.origin[0] < -100.0 || car.origin[0] > 100.0) {
+    // Clamp the x-coord of the car within the scene.
+    car.origin[0] = std::max(-100.0f, std::min(100.0f, car.origin[0]));
+    // Flip the car around.
+    car.rotation_angle = std::fmod(car.rotation_angle + 180.0, 360.0);
+    car_speed *= -1;
+  }
+
   glutPostRedisplay();
 }
 
@@ -309,7 +321,7 @@ auto render() -> void {
   for (auto& object : world) {
     object.render();
   }
-  vehicle.render();
+  car.render();
   pedestrian.render();
 
   glutSwapBuffers();
@@ -448,6 +460,8 @@ auto main (int argc, char **argv) -> int {
 
     world.push_back(create_box({x, 0.0, 8.0}, {bw, bh}, {r, g, b}));
   }
+
+  car = Object("car.obj");
 
   glutMainLoop();
 }
