@@ -182,7 +182,7 @@ bool key_down[256] = {false};
 std::random_device rd;
 std::mt19937 gen(rd());
 
-Vec<3> eye {0.0, 75.0, -90.0};
+Vec<3> overhead_eye {0.0, 75.0, -90.0};
 GLfloat horz_rot, vert_rot;
 
 GLfloat global_specular[] {0.5, 0.5, 0.5, 1.0};
@@ -194,7 +194,8 @@ std::vector<Light> lights;
 Object car;
 Object pedestrian;
 bool is_pedestrian_crossing{false};
-
+bool following_car{false};
+float max_car_speed = 50.0;
 float car_speed = 50.0;
 
 auto create_box(Vec<3> origin, Vec<2> size, Vec<3> color) -> Object {
@@ -265,6 +266,11 @@ auto create_plane(Vec<3> origin, Vec<2> size, Vec<3> color) -> Object {
   return plane;
 }
 
+template <typename T>
+inline auto sign(T t) -> T {
+  return std::signbit(t) ? T(-1) : T(1);
+}
+
 auto is_car_facing_pedestrian() -> bool {
   return (car.origin[0] < pedestrian.origin[0] && car_speed > 0)
       || (car.origin[0] > pedestrian.origin[0] && car_speed < 0);
@@ -294,7 +300,6 @@ auto tick(UNUSED int v) -> void {
   if (key_down['s']) {
     vert_rot = std::fmod(vert_rot - 360*dt/2, 360);
   }
-
   if (key_down[27]) {
     // Quit on escape key.
     std::exit(0);
@@ -318,16 +323,15 @@ auto tick(UNUSED int v) -> void {
 
       // Reset the speed of the car.
       if (car_speed < 0.0) {
-        car_speed = -50.0;
+        car_speed = -max_car_speed;
       } else {
-        car_speed = 50.0;
+        car_speed = max_car_speed;
       }
     } else if (is_car_facing_pedestrian()) {
       // Slow the car down so it doesn't hit the pedestrian.
       const auto car_x = car.origin[0];
       const auto ped_x = pedestrian.origin[0];
-      const auto direction = car_speed > 0 ? 1.0f : -1.0f;
-      car_speed = direction * std::min(50.0f, std::abs(car_x - ped_x) - 6.0f);
+      car_speed = sign(car_speed) * std::min(max_car_speed, std::abs(car_x - ped_x) - 6.0f);
     }
   }
 
@@ -353,7 +357,21 @@ auto render() -> void {
   // Set up the camera to look at the origin.
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
-  gluLookAt(eye[0], eye[1], eye[2], 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+  if (following_car) {
+    Vec<3> eye {0.0, 20.0, 0.0};
+    if (car_speed < 0) {
+      eye[0] = std::min(100.0, car.origin[0] + 10.0);
+    } else {
+      eye[0] = std::max(-100.0, car.origin[0] - 10.0);
+    }
+    gluLookAt(eye[0], eye[1], eye[2],
+              car.origin[0], car.origin[1], car.origin[2],
+              0.0, 1.0, 0.0);
+  } else {
+    gluLookAt(overhead_eye[0], overhead_eye[1], overhead_eye[2],
+              0.0, 0.0, 0.0,
+              0.0, 1.0, 0.0);
+  }
 
   glClearColor(0.0, 0.0, 0.0, 0.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -383,8 +401,8 @@ auto handle_mouse(int button, int state, int x, int y) -> void {
     GLfloat dx = (x * 2.0) / width - 1.0;
     GLfloat dy = ((height - y) * 2.0) / height - 1.0;
     // Then shift the X/Y position of the camera.
-    eye[0] += dx;
-    eye[1] += dy;
+    overhead_eye[0] += dx;
+    overhead_eye[1] += dy;
   }
 }
 
@@ -399,11 +417,25 @@ auto handle_keyup(unsigned char key, UNUSED int x, UNUSED int y) -> void {
 auto menu(int option) -> void {
   switch (option) {
     case 0:
+      following_car = !following_car;
+      break;
     case 1:
+      max_car_speed = 0.0;
+      car_speed = sign(car_speed) * 0.0;
+      break;
     case 2:
-      lights[option].toggle();
+      max_car_speed = 50.0;
+      car_speed = sign(car_speed) * 50.0;
       break;
     case 3:
+      max_car_speed -= 10.0;
+      car_speed = sign(car_speed) * max_car_speed;
+      break;
+    case 4:
+      max_car_speed += 10.0;
+      car_speed = sign(car_speed) * max_car_speed;
+      break;
+    case 5:
       std::exit(0);
   }
 }
@@ -426,10 +458,12 @@ auto main (int argc, char **argv) -> int {
 
   // Create the context menu.
   glutCreateMenu(menu);
-  glutAddMenuEntry("Toggle Light 0", 0);
-  glutAddMenuEntry("Toggle Light 1", 1);
-  glutAddMenuEntry("Toggle Light 2", 2);
-  glutAddMenuEntry("Quit", 3);
+  glutAddMenuEntry("Toggle Camera Following Car", 0);
+  glutAddMenuEntry("Stop Car", 1);
+  glutAddMenuEntry("Reset Car", 2);
+  glutAddMenuEntry("Slow Down Car", 3);
+  glutAddMenuEntry("Speed Up Car", 4);
+  glutAddMenuEntry("Quit", 5);
   glutAttachMenu(GLUT_RIGHT_BUTTON);
 
   // Set up the global lighting.
