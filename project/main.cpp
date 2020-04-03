@@ -265,14 +265,19 @@ auto create_plane(Vec<3> origin, Vec<2> size, Vec<3> color) -> Object {
   return plane;
 }
 
+auto is_car_facing_pedestrian() -> bool {
+  return (car.origin[0] < pedestrian.origin[0] && car_speed > 0)
+      || (car.origin[0] > pedestrian.origin[0] && car_speed < 0);
+}
+
 auto tick(UNUSED int v) -> void {
   // Run tick again, at approximately 60 FPS.
   glutTimerFunc(frame_time, tick, 0);
 
   // Calculate time elapsed since the last frame.
-  int time = glutGet(GLUT_ELAPSED_TIME);
+  const int time = glutGet(GLUT_ELAPSED_TIME);
   static int prev_time = 0;
-  double dt = (time - prev_time) / 1000.0;
+  const double dt = (time - prev_time) / 1000.0;
   prev_time = time;
 
   // Rotate the house object, wrapping around at 360 degrees to prevent
@@ -296,8 +301,8 @@ auto tick(UNUSED int v) -> void {
   }
 
   if (!is_pedestrian_crossing) {
-    // Send out a pedestrian randomly, on average every 4 seconds.
-    std::uniform_int_distribution<> dis(1, fps * 4);
+    // Send out a pedestrian randomly, on average every 3 seconds.
+    std::uniform_int_distribution<> dis(1, fps * 3);
     if (dis(gen) == 1) {
       is_pedestrian_crossing = true;
 
@@ -305,11 +310,24 @@ auto tick(UNUSED int v) -> void {
       pedestrian.origin = {(float)x_position_dis(gen), 0.0, 6.0};
     }
   } else {
-    pedestrian.origin[2] -= dt * 1.0;
+    pedestrian.origin[2] -= dt * 2.0;
 
     if (pedestrian.origin[2] < -6) {
       pedestrian.origin[2] = 6.0;
       is_pedestrian_crossing = false;
+
+      // Reset the speed of the car.
+      if (car_speed < 0.0) {
+        car_speed = -50.0;
+      } else {
+        car_speed = 50.0;
+      }
+    } else if (is_car_facing_pedestrian()) {
+      // Slow the car down so it doesn't hit the pedestrian.
+      const auto car_x = car.origin[0];
+      const auto ped_x = pedestrian.origin[0];
+      const auto direction = car_speed > 0 ? 1.0f : -1.0f;
+      car_speed = direction * std::min(50.0f, std::abs(car_x - ped_x) - 6.0f);
     }
   }
 
